@@ -1,0 +1,116 @@
+---
+title: "Abalone_Weight_Analysis"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+
+#Introduction
+Abalone is a common seafood. Generally, the larger the size of the abalone, the higher the price. Farmers need to observe the weight and size of abalone in order to sell them when they are mature enough and get higher profit. How to choose the sex and length of abalone to sell is important to maximize the profit. Therefore, it is important for the abalone farming industry to know the factors that affect the weight of abalone. This project will look for some factors that affect the weight of abalone, especially the effect of length and sex on weight. It will then provide a basis for decision making for the farmers.
+
+#The data
+This dataset comes from the UCI machine learning database.
+Original owners of database:
+	Marine Resources Division
+	Marine Research Laboratories - Taroona
+	Department of Primary Industry and Fisheries, Tasmania
+	GPO Box 619F, Hobart, Tasmania 7001, Australia
+
+#Regression Analysis
+First, create a model of whole weight versus length (mod1.1). And the correlation efficiency is 0.93, with a significant positive correlation. A trend can be clearly seen through its plot, the longer the length, the heavier the weight. This matches our intuition. However, the data does not present a straight line shape, but a curve.
+
+In the beginning, as the length increases, the weight increases more slowly. And in the later stages, the length growth rate became slower relative to the beginning , and the weight growth rate became faster. At the same time, the weight is more variable, probably because the gender difference causes more fluctuation in weight for the same length. Try to investigate more about the sex effect.
+
+So, next step is to take the sex into account.(mod1.2)
+In order to make the effect of gender on weight more obvious, we need to remove the infant data. Only keep the data for male and female (mod 1.3).
+In nature, there is usually a difference in body size between males and females, so sex is likely to have an effect on whole weight at the same time as length. Therefore, the interation between sex and length needs to be considered
+The relation between weight and length and sex was shown in the new model(mod1.4, with interaction)
+
+But mod1.4 is still not good enough because $R^2$ is very low and the graph of the data shows that the data deviates a lot from the model value. Based on the shape of the data, we can presume that it is an exponential or quadratic function of the model, so the transformation should be performed next.(mod1.5)
+
+By observation of both xyplot for model1.4 and model1.5 (square transformation), model 1.5 is better, but the coefficient of sex term is only 0.01.
+The above model only describes F and M, but does not include I. Therefore, trying to add the infant data back in the sex category of model(mod1.6) and the $R^2$ of the model is even higher, which means that the model will describe the data more accurately when including infant data.
+
+Interms of the higher  $R^2$, the final regression model is mod1.6:
+
+$whole \quad weight = 0.52-3.36*length+7.22*length^2-0.06*sexI(sex=Infant) +0.01*sexM(sex =Male)$
+
+#Discussion of the Analysis
+Even though the final model has reached $R^2$ above 0.9, this model still needs to be improved. For example, in the sex variable, there are 3 categories. One of them, infant, intuitively, does not belong to gender but to age. Probably the $I$ sex category had to be added in the sex variable because abalone could not be determined its gender at the infant stage. However, in the formula of the final model, the coefficient of infant term is -0.06 while the coefficient of male term is 0.01. Numerically, the infant term has a greater effect on the model than gender itself, which can be very confusing.
+Moreover, the data collection was limited to a specific region, and the model based on this dataset does not describe all abalone in other parts of the world.  Therefore, these are the part of this analysis that needs to be improved.
+
+#Conclusion
+The length and sex of abalone will have an effect on whole weight, but the effect of sex is small, compared to the effect of length. Therefore, farmers do not necessarily need to consider the sex of the abalone to improve the profitability, because the effect of sex on the weight is not very significant. Length, on the other hand, has the higher significant effect on abalone weight. Farmers need to pay more attention to the length of abalone.
+
+#Appendix 
+
+
+```{r,warning=FALSE, message=FALSE}
+abalone=read.table("abalone.txt",sep = ",")
+names(abalone)=c("sex","length","diameter","height","wholeweight","shuckedwt","viscerawt","shellwt","rings")
+library(mosaic)
+```
+
+##Model-1.1
+```{r, echo=FALSE}
+cor(wholeweight~length, data = abalone)
+mod1.1<-lm(wholeweight~length, data = abalone)
+coef(mod1.1)
+
+```
+
+##Model-1.2
+```{r}
+mod1.2<-lm(wholeweight~sex, data = abalone)
+coef(mod1.2)
+```
+
+##Model-1.3
+```{r}
+ab_adult=abalone[abalone$sex!="I",]
+mod1.3<-lm(wholeweight~sex, data = ab_adult)
+coef(mod1.3)
+```
+
+##Model-1.4
+```{r}
+mod1.4<-lm(wholeweight~length*sex,data = ab_adult)
+coef(mod1.4)
+
+rsquared(mod1.4)
+```
+
+```{r, echo=FALSE, out.width=c('50%', '50%'), fig.show='hold'}
+xyplot(wholeweight+fitted(mod1.1)~length, cex=0.1, data = abalone)
+xyplot(wholeweight+fitted(mod1.4)~length, cex=0.1,data= ab_adult)
+```
+
+##Model-1.5
+```{r}
+mod1.5 <- lm( wholeweight ~ length + I(length^2) + sex, data = ab_adult)
+
+coef(mod1.5)
+rsquared(mod1.5)
+```
+
+##Model-1.6
+```{r}
+mod1.6 <- lm( wholeweight ~ length + I(length^2) + sex, data = abalone)
+
+coef(mod1.6)
+rsquared(mod1.6)
+```
+
+```{r, echo=FALSE, out.width=c('50%', '50%'), fig.show='hold'}
+xyplot(wholeweight+fitted(mod1.5)~length, cex=0.1, data = ab_adult)
+xyplot(wholeweight+fitted(mod1.6)~length, cex=0.1, data = abalone)
+```
+
+#Model Formula
+$Whole \quad Weight = 0.52-3.36*Length+7.22*Length^2-0.06*SexI(sex=Infant) +0.01*SexM(sex =Male)$
